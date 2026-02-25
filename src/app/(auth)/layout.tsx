@@ -13,7 +13,7 @@ export default function AuthLayout({
             Пусть судьба решит, что сегодня есть
           </p>
         </div>
-        <div className="rounded-2xl bg-white p-8 shadow-lg">{children}</div>
+        <div className="rounded-2xl bg-white p-5 shadow-lg sm:p-8">{children}</div>
       </div>
     </div>
   );

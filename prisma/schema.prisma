@@ -18,6 +18,7 @@ model User {
 
   accounts Account[]
   sessions Session[]
+  lotteryVotes LotteryVote[]
 
   @@map("users")
 }
@@ -60,4 +61,91 @@ model VerificationToken {
 
   @@unique([identifier, token])
   @@map("verification_tokens")
+}
+
+model Ingredient {
+  id        String   @id @default(cuid())
+  name      String
+  imageUrl  String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  recipes RecipeIngredient[]
+
+  @@map("ingredients")
+}
+
+model Recipe {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  imageUrl    String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  ingredients RecipeIngredient[]
+  lotteryEntries LotteryRoundRecipe[]
+  lotteryVotes LotteryVote[]
+
+  @@map("recipes")
+}
+
+enum LotteryVoteChoice {
+  WANT
+  OKAY
+  NOPE
+}
+
+model LotteryRound {
+  id        String              @id @default(cuid())
+  dateKey   String              @unique
+  startsAt  DateTime            @db.Timestamptz(3)
+  endsAt    DateTime            @db.Timestamptz(3)
+  createdAt DateTime            @default(now()) @db.Timestamptz(3)
+
+  recipes LotteryRoundRecipe[]
+  votes   LotteryVote[]
+
+  @@map("lottery_rounds")
+}
+
+model LotteryRoundRecipe {
+  roundId  String
+  recipeId String
+
+  round  LotteryRound @relation(fields: [roundId], references: [id], onDelete: Cascade)
+  recipe Recipe       @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  votes  LotteryVote[]
+
+  @@id([roundId, recipeId])
+  @@map("lottery_round_recipes")
+}
+
+model LotteryVote {
+  id       String            @id @default(cuid())
+  roundId  String
+  recipeId String
+  userId   String
+  choice   LotteryVoteChoice
+  createdAt DateTime         @default(now()) @db.Timestamptz(3)
+
+  round       LotteryRound       @relation(fields: [roundId], references: [id], onDelete: Cascade)
+  roundRecipe LotteryRoundRecipe @relation(fields: [roundId, recipeId], references: [roundId, recipeId], onDelete: Cascade)
+  recipe      Recipe             @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  user        User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([roundId, recipeId, userId])
+  @@index([roundId, recipeId])
+  @@map("lottery_votes")
+}
+
+model RecipeIngredient {
+  recipeId     String
+  ingredientId String
+
+  recipe     Recipe     @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  ingredient Ingredient @relation(fields: [ingredientId], references: [id], onDelete: Cascade)
+
+  @@id([recipeId, ingredientId])
+  @@map("recipe_ingredients")
 }

@@ -1,0 +1,44 @@
+---
+description: Responsive layout standards for UI components and pages
+globs: **/*.tsx
+alwaysApply: false
+---
+
+# Responsive Layout
+
+All UI must be responsive and adapt to different screen sizes using Tailwind CSS breakpoints.
+
+## Breakpoints (mobile-first)
+
+- Default (no prefix) — mobile, `< 640px`
+- `sm:` — `≥ 640px`
+- `md:` — `≥ 768px`
+- `lg:` — `≥ 1024px`
+- `xl:` — `≥ 1280px`
+
+## Rules
+
+- Always design **mobile-first**: start with mobile styles, then override at larger breakpoints.
+- Never use fixed pixel widths for layout containers — use `w-full`, `max-w-*`, or responsive fractions.
+- Use responsive grid and flex utilities: `grid-cols-1 md:grid-cols-2 lg:grid-cols-3`.
+- Use responsive typography: `text-sm md:text-base lg:text-lg`.
+- Ensure touch targets are at least `44px` on mobile (use `min-h-11 min-w-11` or `p-3`).
+
+## Examples
+
+```tsx
+// ❌ BAD — fixed width, not responsive
+<div className="w-[800px] flex">...</div>
+
+// ✅ GOOD — fluid, responsive layout
+<div className="w-full max-w-4xl mx-auto flex flex-col md:flex-row gap-4">...</div>
+```
+
+```tsx
+// ❌ BAD — hidden content without responsive alternative
+<nav className="hidden">...</nav>
+
+// ✅ GOOD — show/hide at appropriate breakpoints
+<nav className="hidden md:flex">...</nav>
+<MobileMenu className="flex md:hidden" />
+```

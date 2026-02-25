@@ -50,7 +50,7 @@ export function RegisterForm() {
         type="text"
         value={name}
         onChange={(e) => setName(e.target.value)}
-        placeholder="Иван Иванов"
+        placeholder="Иван"
         autoComplete="name"
         required
       />
