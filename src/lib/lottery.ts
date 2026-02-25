@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { Prisma } from "@prisma/client";
 
 const DAILY_RECIPE_LIMIT = 10;
 const DEFAULT_TIME_ZONE = "UTC";
@@ -17,8 +18,11 @@ export async function getOrCreateTodayRound(rawTimeZone?: string) {
   const now = new Date();
   const { dateKey, nextMidnightUtc } = await getRoundBoundaryForTimeZone(timeZone);
 
-  const existing = await prisma.lotteryRound.findUnique({
-    where: { dateKey },
+  const existing = await prisma.lotteryRound.findFirst({
+    where: {
+      OR: [{ dateKey }, { endsAt: nextMidnightUtc }],
+    },
+    orderBy: { createdAt: "asc" },
     include: {
       recipes: {
         include: { recipe: true },
@@ -37,24 +41,45 @@ export async function getOrCreateTodayRound(rawTimeZone?: string) {
     .slice(0, DAILY_RECIPE_LIMIT)
     .map((recipe) => recipe.id);
 
-  return prisma.lotteryRound.create({
-    data: {
-      dateKey,
-      startsAt: now,
-      endsAt: nextMidnightUtc,
-      recipes: {
-        create: selectedRecipeIds.map((recipeId) => ({
-          recipeId,
-        })),
+  try {
+    return await prisma.lotteryRound.create({
+      data: {
+        dateKey,
+        startsAt: now,
+        endsAt: nextMidnightUtc,
+        recipes: {
+          create: selectedRecipeIds.map((recipeId) => ({
+            recipeId,
+          })),
+        },
       },
-    },
-    include: {
-      recipes: {
-        include: { recipe: true },
+      include: {
+        recipes: {
+          include: { recipe: true },
+        },
+        votes: true,
       },
-      votes: true,
-    },
-  });
+    });
+  } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+      const concurrentRound = await prisma.lotteryRound.findFirst({
+        where: {
+          OR: [{ dateKey }, { endsAt: nextMidnightUtc }],
+        },
+        orderBy: { createdAt: "asc" },
+        include: {
+          recipes: {
+            include: { recipe: true },
+          },
+          votes: true,
+        },
+      });
+
+      if (concurrentRound) return concurrentRound;
+    }
+
+    throw error;
+  }
 }
 
 export function getTimeLeftMs(endsAt: Date) {
@@ -73,16 +98,15 @@ export function normalizeTimeZone(rawTimeZone?: string) {
 
 async function getRoundBoundaryForTimeZone(timeZone: string) {
   const rows = await prisma.$queryRaw<
-    { localDateKey: string; nextMidnightUtcMs: bigint }[]
+    { nextMidnightUtcMs: bigint }[]
   >`
     SELECT
-      to_char((CURRENT_TIMESTAMP AT TIME ZONE ${timeZone})::date, 'YYYY-MM-DD') AS "localDateKey",
       (extract(epoch from ((date_trunc('day', CURRENT_TIMESTAMP AT TIME ZONE ${timeZone}) + interval '1 day') AT TIME ZONE ${timeZone})) * 1000)::bigint AS "nextMidnightUtcMs"
   `;
 
   const row = rows[0];
   return {
-    dateKey: `${timeZone}:${row.localDateKey}`,
+    dateKey: `round:${row.nextMidnightUtcMs.toString()}`,
     nextMidnightUtc: new Date(Number(row.nextMidnightUtcMs)),
   };
 }
