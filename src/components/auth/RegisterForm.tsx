@@ -12,6 +12,7 @@ export function RegisterForm() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [isPasswordVisible, setIsPasswordVisible] = useState(false);
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
@@ -65,11 +66,23 @@ export function RegisterForm() {
       />
       <Input
         label="Пароль"
-        type="password"
+        type={isPasswordVisible ? "text" : "password"}
         value={password}
         onChange={(e) => setPassword(e.target.value)}
         placeholder="Минимум 6 символов"
         autoComplete="new-password"
+        rightElement={
+          <button
+            type="button"
+            onClick={() => setIsPasswordVisible((prev) => !prev)}
+            className="text-xs font-medium text-gray-500 transition-colors hover:text-gray-700"
+            aria-label={
+              isPasswordVisible ? "Скрыть пароль" : "Показать пароль"
+            }
+          >
+            {isPasswordVisible ? "Скрыть" : "Показать"}
+          </button>
+        }
         minLength={6}
         required
       />
